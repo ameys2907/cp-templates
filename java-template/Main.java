@@ -15,6 +15,12 @@ public class Main
     //output print methods
     static void pln(Object o) {out.println(o);}
     static void p(Object o) {out.print(o + " ");}
+    // Array printing methods (Space Separated)
+    static void p(int[] a) { for(int i : a) p(i); }
+    static void p(long[] a) { for(long i : a) p(i); }
+    static void p(String[] a) { for(String s : a) p(s); }
+    static void p(double[] a) { for(double d : a) p(d); }
+    static void p(char[] a) { for(char c : a) p(c); }
     
     //fast input output class
     static class FastIO {
