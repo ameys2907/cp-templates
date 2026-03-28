@@ -108,6 +108,11 @@ class DSU {
 
 //template 2: Number Theory
 class MathUtils {
+    
+    // ==========================================
+    // 1. STATIC UTILITIES (Call anywhere)
+    // ==========================================
+    
     public static long gcd(long a, long b) {
         while (b != 0) {
             long temp = b;
@@ -119,9 +124,11 @@ class MathUtils {
 
     public static long lcm(long a, long b) {
         if (a == 0 || b == 0) return 0;
-        return (a / gcd(a, b)) * b;
+        // Divide first to prevent overflow
+        return (a / gcd(a, b)) * b; 
     }
 
+    // Fast Exponentiation: base^exp
     public static long pow(long base, long exp) {
         long res = 1;
         while (exp > 0) {
@@ -144,50 +151,53 @@ class MathUtils {
         return res;
     }
 
-    // Modular Inverse using Fermat's Little Theorem (only if MOD is prime)
+    // Modular Inverse using Fermat's Little Theorem (requires MOD to be prime)
     public static long modInverse(long n, int MOD) {
         return pow(n, MOD - 2, MOD);
     }
-}
 
-//template 3: dijkstra
-class Dijkstra {
-    // Returns the shortest distance from src to dest, or -1 if unreachable
-    // adj structure: adj.get(u) contains {v, weight}
-    public static long dijkstra(int n, List<List<int[]>> adj, int src, int dest) {
-        long[] dist = new long[n + 1]; // Use n if 0-indexed, n+1 if 1-indexed
-        Arrays.fill(dist, Long.MAX_VALUE);
-        dist[src] = 0;
+    // ==========================================
+    // 2. COMBINATORICS (Requires Instantiation)
+    // ==========================================
+    
+    long[] fact;
+    long[] invFact;
+    int MOD;
 
-        PriorityQueue<long[]> pq = new PriorityQueue<>(
-            (a, b) -> Long.compare(a[1], b[1])
-        ); //{node, current_dist}
-        
-        pq.add(new long[]{src, 0});
+    public MathUtils(int maxN, int mod) {
+        this.MOD = mod;
+        fact = new long[maxN + 1];
+        invFact = new long[maxN + 1];
 
-        while (!pq.isEmpty()) {
-            long[] curr = pq.poll();
-            int u = (int) curr[0];
-            long d = curr[1];
+        fact[0] = 1;
+        invFact[0] = 1;
 
-            if (d > dist[u]) continue; //skip unnecessary entries
-            if (u == dest) return d; //early exit
-
-            for (int[] edge : adj.get(u)) {
-                int v = edge[0];
-                int weight = edge[1];
-
-                if (dist[u] + weight < dist[v]) { //relaxation
-                    dist[v] = dist[u] + weight;
-                    pq.add(new long[]{v, dist[v]});
-                }
-            }
+        // Precompute factorials
+        for (int i = 1; i <= maxN; i++) {
+            fact[i] = (fact[i - 1] * i) % MOD;
         }
-        return dist[dest] == Long.MAX_VALUE ? -1 : dist[dest];
+
+        // Precompute inverse factorials using the static pow method
+        invFact[maxN] = pow(fact[maxN], MOD - 2, MOD);
+        for (int i = maxN - 1; i >= 1; i--) {
+            invFact[i] = (invFact[i + 1] * (i + 1)) % MOD;
+        }
+    }
+
+    public long nPr(int n, int r) {
+        if (r < 0 || r > n) return 0;
+        return (fact[n] * invFact[n - r]) % MOD;
+    }
+
+    public long nCr(int n, int r) {
+        if (r < 0 || r > n) return 0;
+        long numerator = fact[n];
+        long denominator = (invFact[r] * invFact[n - r]) % MOD;
+        return (numerator * denominator) % MOD;
     }
 }
 
-//template 4: Strings
+//template 3: Strings
 class KMP {
     // Returns a list of all starting indices of pattern in text
     public static List<Integer> contains(String pattern, String text) {
@@ -233,5 +243,69 @@ class KMP {
             lps[i] = prev_idx + (s.charAt(i) == s.charAt(prev_idx) ? 1 : 0);
         }
         return lps;
+    }
+}
+
+
+//template 4: Dp
+class DP {
+
+    // ==========================================
+    // 1. LONGEST INCREASING SUBSEQUENCE (LIS)
+    // Time: O(N log N) | Space: O(N)
+    // ==========================================
+    public static int lis(int[] nums) {
+        int[] tails = new int[nums.length];
+        int size = 0;
+        
+        for (int x : nums) {
+            int left = 0, right = size;
+            
+            // Binary Search to find the insertion point (lower bound)
+            while (left != right) {
+                int mid = left + (right - left) / 2;
+                if (tails[mid] < x) {  // Change to '<=' if strictly increasing is not required
+                    left = mid + 1;
+                } else {
+                    right = mid;
+                }
+            }
+            
+            // Overwrite the element to keep the sequence elements as small as possible
+            tails[left] = x;
+            if (left == size) {
+                size++;
+            }
+        }
+        return size;
+    }
+
+    // ==========================================
+    // 2. LONGEST COMMON SUBSEQUENCE (LCS)
+    // Time: O(N * M) | Space: O(min(N, M))
+    // ==========================================
+    public static int lcs(String text1, String text2) {
+        // Force text2 to be the shorter string to minimize our 1D array size
+        if (text1.length() < text2.length()) {
+            return lcs(text2, text1);
+        }
+        
+        int n = text1.length();
+        int m = text2.length();
+        int[] dp = new int[m + 1];
+        
+        for (int i = 1; i <= n; i++) {
+            int prev = 0; // Tracks the diagonal dp[i-1][j-1] from the traditional 2D grid
+            for (int j = 1; j <= m; j++) {
+                int temp = dp[j];
+                if (text1.charAt(i - 1) == text2.charAt(j - 1)) {
+                    dp[j] = prev + 1;
+                } else {
+                    dp[j] = Math.max(dp[j], dp[j - 1]);
+                }
+                prev = temp;
+            }
+        }
+        return dp[m];
     }
 }
